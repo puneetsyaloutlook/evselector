@@ -178,6 +178,23 @@ input[type="number"] { width: 130px; font-variant-numeric: tabular-nums; }
 .said summary { cursor: pointer; min-height: 32px; display: flex; align-items: center; color: var(--accent); font-weight: 600; }
 .said ul { margin: 6px 0 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; max-width: 80ch; }
 .said b { color: var(--fg); font-weight: 600; }
+#sort-wrap { margin-left: auto; }
+.view { min-width: 180px; }
+.chart-controls { display: flex; flex-wrap: wrap; gap: 12px 20px; margin-top: 16px; }
+.chart-controls > div { min-width: 190px; }
+.chart-card { border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--card); padding: 12px 14px; margin-top: 12px; }
+.chart-card svg { width: 100%; height: auto; display: block; }
+.chart-card text { fill: var(--fg-2); font-family: var(--font-sans); font-size: 12px; }
+.chart-card .axis-title { fill: var(--fg); font-weight: 600; }
+.chart-card .grid { stroke: var(--border); stroke-width: 1; }
+.chart-card .axis { stroke: var(--border-strong); stroke-width: 1; }
+.pt { fill: var(--mark); fill-opacity: 0.55; stroke: var(--mark); stroke-width: 1.5; cursor: pointer; }
+.pt:hover, .pt:focus-visible { fill-opacity: 0.9; }
+.pt.picked { fill: var(--accent); fill-opacity: 1; stroke: var(--fg); stroke-width: 2; }
+.pt-label { fill: var(--fg) !important; font-weight: 600; paint-order: stroke; stroke: var(--card); stroke-width: 4px; }
+.pick { margin-top: 10px; border-top: 1px solid var(--border); padding-top: 10px; font-size: 0.875rem; color: var(--fg-2); min-height: 44px; }
+.pick strong { color: var(--fg); }
+.chart-note { color: var(--fg-2); font-size: 0.8125rem; margin-top: 8px; }
 @media (prefers-reduced-motion: reduce) { * { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; } }
 </style>
 </head>
@@ -210,7 +227,14 @@ input[type="number"] { width: 130px; font-variant-numeric: tabular-nums; }
         <div>
           <h2 id="res-title">Matching variants</h2>
         </div>
-        <div class="sort">
+        <div class="view">
+          <span class="field-label" id="view-l">View as</span>
+          <div class="seg" role="group" aria-labelledby="view-l">
+            <button type="button" data-view="list" aria-pressed="true">List</button>
+            <button type="button" data-view="chart" aria-pressed="false">Chart</button>
+          </div>
+        </div>
+        <div class="sort" id="sort-wrap">
           <label class="field-label" for="sort">Sort by</label>
           <select id="sort">
             <option value="match">Closest match</option>
@@ -223,7 +247,7 @@ input[type="number"] { width: 130px; font-variant-numeric: tabular-nums; }
       </div>
       <p class="summary" id="summary" aria-live="polite"></p>
       <div class="example" id="example" hidden>Example selection loaded: visibility reported as good and adaptive cruise without complaints (both high importance), servicing at most $500 a year, and power as a low importance preference. Change or clear it to suit you.</div>
-      <div class="legend" aria-label="How to read the match markers">
+      <div class="legend" id="legend" aria-label="How to read the match markers">
         <span><i class="dot full"></i>Matches</span>
         <span><i class="dot half"></i>Partly matches</span>
         <span><i class="dot empty"></i>Does not match</span>
@@ -668,7 +692,7 @@ function freshState() {
   CRITERIA.forEach(c => {
     sel[c.id] = { on:false, mode:c.defMode || 'low', value:c.def || 0, weight:2, accept: c.type==='cat' && !c.exp ? c.options.slice() : [] };
   });
-  return { sel, hard:false, da:false, cov:false, sort:'match', example:false };
+  return { sel, hard:false, da:false, cov:false, sort:'match', example:false, view:'list', x:'price', y:'range', pick:null };
 }
 function exampleState() {
   const s = freshState();
@@ -685,7 +709,7 @@ try {
   if (saved && saved.sel) {
     const base = freshState();
     CRITERIA.forEach(c => { if (saved.sel[c.id]) Object.assign(base.sel[c.id], saved.sel[c.id]); });
-    base.hard = !!saved.hard; base.da = !!saved.da; base.cov = !!saved.cov; base.sort = saved.sort || 'match'; base.example = false;
+    base.hard = !!saved.hard; base.da = !!saved.da; base.cov = !!saved.cov; base.view = saved.view === 'chart' ? 'chart' : 'list'; base.x = saved.x || 'price'; base.y = saved.y || 'range'; base.sort = saved.sort || 'match'; base.example = false;
     state = base;
   }
 } catch (e) {}
@@ -774,6 +798,9 @@ function syncPanel() {
   document.getElementById('hard').checked = state.hard;
   document.getElementById('da').checked = state.da;
   document.getElementById('cov').checked = state.cov;
+  document.querySelectorAll('[data-view]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.view === state.view)));
+  document.getElementById('sort-wrap').hidden = state.view === 'chart';
+  document.getElementById('legend').hidden = state.view === 'chart';
   document.getElementById('sort').value = state.sort;
   document.getElementById('example').hidden = !state.example;
 }
@@ -833,6 +860,65 @@ function specVal(c, car) {
   if (c.type === 'cat') return '<dd>' + (c.id === 'drive' ? v : c.labelOf(v)) + '</dd>';
   return '<dd>' + c.fmt(v) + '</dd>';
 }
+/* Chart view: a scatter of the variants currently shown, on two axes the person picks. */
+const AXES = ['price','range','service','power','warranty','battery','stars','match'];
+const DISCRETE = ['warranty','battery','stars'];
+function axisLabel(id) { return id === 'match' ? 'Match score' : CRITERIA.find(c => c.id === id).label; }
+function axisFmt(id, v) { return id === 'match' ? Math.round(v) + '%' : CRITERIA.find(c => c.id === id).fmt(v); }
+function axisScale(min, max) {
+  if (min === max) { min -= 1; max += 1; }
+  const raw = (max - min) / 5, mag = Math.pow(10, Math.floor(Math.log10(raw))), norm = raw / mag;
+  const step = (norm < 1.5 ? 1 : norm < 3 ? 2 : norm < 7 ? 5 : 10) * mag;
+  const lo = Math.floor(min / step) * step, hi = Math.ceil(max / step) * step;
+  const ticks = [];
+  for (let v = lo; v <= hi + step / 1000; v += step) ticks.push(+v.toFixed(10));
+  return { lo, hi, ticks };
+}
+function chartHTML(shown, act) {
+  const avail = AXES.filter(id => id !== 'match' || act.length);
+  if (!avail.includes(state.x)) state.x = 'price';
+  if (!avail.includes(state.y)) state.y = state.x === 'range' ? 'price' : 'range';
+  const opt = (cur) => avail.map(id => `<option value="${id}"${id === cur ? ' selected' : ''}>${axisLabel(id)}</option>`).join('');
+  const val = (r, id) => id === 'match' ? r.pct : r.car[id];
+  const pts = shown.filter(r => val(r, state.x) != null && val(r, state.y) != null);
+  const W = 640, H = 420, L = 70, R = 18, T = 14, B = 56;
+  let svg = '';
+  if (pts.length) {
+    const xs = pts.map(r => val(r, state.x)), ys = pts.map(r => val(r, state.y));
+    const sx = axisScale(Math.min(...xs), Math.max(...xs)), sy = axisScale(Math.min(...ys), Math.max(...ys));
+    const X = v => L + (v - sx.lo) / (sx.hi - sx.lo) * (W - L - R);
+    const Y = v => H - B - (v - sy.lo) / (sy.hi - sy.lo) * (H - T - B);
+    const grid = sx.ticks.map(t => `<line class="grid" x1="${X(t)}" x2="${X(t)}" y1="${T}" y2="${H - B}"/><text x="${X(t)}" y="${H - B + 18}" text-anchor="middle">${axisFmt(state.x, t)}</text>`).join('')
+      + sy.ticks.map(t => `<line class="grid" x1="${L}" x2="${W - R}" y1="${Y(t)}" y2="${Y(t)}"/><text x="${L - 8}" y="${Y(t) + 4}" text-anchor="end">${axisFmt(state.y, t)}</text>`).join('');
+    const jit = (i, id) => DISCRETE.includes(id) ? (((i * 37) % 11) - 5) * 1.6 : 0;
+    let picked = null;
+    const dots = pts.map((r, i) => {
+      const cx = X(val(r, state.x)) + jit(i, state.x), cy = Y(val(r, state.y)) + jit(i + 5, state.y);
+      const isPick = state.pick === r.car.id;
+      if (isPick) picked = { r, cx, cy };
+      const name = r.car.brand + ' ' + r.car.model + ' ' + r.car.variant;
+      return `<circle class="pt${isPick ? ' picked' : ''}" data-pt="${r.car.id}" cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${isPick ? 8 : 6}" tabindex="0" role="button" aria-label="${name}, ${axisLabel(state.x)} ${axisFmt(state.x, val(r, state.x))}, ${axisLabel(state.y)} ${axisFmt(state.y, val(r, state.y))}"><title>${name}</title></circle>`;
+    }).join('');
+    const lab = picked ? `<text class="pt-label" x="${Math.min(picked.cx + 12, W - 150)}" y="${Math.max(picked.cy - 12, 14)}">${picked.r.car.model} ${picked.r.car.variant}</text>` : '';
+    svg = `<svg viewBox="0 0 ${W} ${H}" role="group" aria-label="Scatter chart of ${pts.length} variants">
+      ${grid}<line class="axis" x1="${L}" x2="${W - R}" y1="${H - B}" y2="${H - B}"/><line class="axis" x1="${L}" x2="${L}" y1="${T}" y2="${H - B}"/>
+      <text class="axis-title" x="${(L + W - R) / 2}" y="${H - 10}" text-anchor="middle">${axisLabel(state.x)}</text>
+      <text class="axis-title" transform="translate(16 ${(T + H - B) / 2}) rotate(-90)" text-anchor="middle">${axisLabel(state.y)}</text>
+      ${dots}${lab}</svg>`;
+  } else {
+    svg = '<div class="empty-state">No variants have data for both of these axes. Choose different axes.</div>';
+  }
+  const pk = pts.find(r => r.car.id === state.pick);
+  const pick = pk ? `<strong>${pk.car.brand} ${pk.car.model} ${pk.car.variant}</strong>. ${axisLabel(state.x)}: ${axisFmt(state.x, val(pk, state.x))}. ${axisLabel(state.y)}: ${axisFmt(state.y, val(pk, state.y))}.${pk.pct != null ? ' Match: ' + pk.pct + '%.' : ''} Price basis: ${pk.car.basis || 'not stated'}.`
+    : 'Select a point to see which variant it is.';
+  const missing = shown.length - pts.length;
+  return `<div class="chart-controls">
+      <div><label class="field-label" for="ax-x">Horizontal axis</label><select id="ax-x" data-ax="x">${opt(state.x)}</select></div>
+      <div><label class="field-label" for="ax-y">Vertical axis</label><select id="ax-y" data-ax="y">${opt(state.y)}</select></div>
+    </div>
+    <div class="chart-card">${svg}<div class="pick" aria-live="polite">${pick}</div></div>
+    <p class="chart-note">${pts.length} of ${shown.length} variants shown have data for both axes and are plotted${missing ? '. The other ' + missing + ' have a dash for at least one axis and are left out' : ''}. Whole-number axes such as years and stars are spread slightly so points do not hide each other. The chart uses the same filters as the list.${state.x === 'price' || state.y === 'price' ? ' Prices are on mixed bases, so tick the drive-away filter to compare them on one basis.' : ''}</p>`;
+}
 function renderResults() {
   const rows = evaluate();
   const act = activeCriteria();
@@ -863,6 +949,7 @@ function renderResults() {
     carsEl.innerHTML = '<div class="empty-state">No variants meet every limit and accepted option. Widen a limit or switch off the option to hide variants that miss one.</div>';
     return;
   }
+  if (state.view === 'chart') { carsEl.innerHTML = chartHTML(shown, act); return; }
   const basics = ['price','range','drive'].map(id => CRITERIA.find(c => c.id === id));
   const selExp = act.filter(c => c.exp);
   carsEl.innerHTML = shown.map(r => {
@@ -931,11 +1018,15 @@ list.addEventListener('input', e => {
   document.getElementById('example').hidden = true;
   renderResults(); save();
 });
+document.querySelectorAll('[data-view]').forEach(b => b.addEventListener('click', () => { state.view = b.dataset.view; refresh(); }));
+carsEl.addEventListener('change', e => { const a = e.target.closest('[data-ax]'); if (a) { state[a.dataset.ax] = a.value; state.pick = null; refresh(); } });
+carsEl.addEventListener('click', e => { const p = e.target.closest('[data-pt]'); if (p) { state.pick = state.pick === p.dataset.pt ? null : p.dataset.pt; renderResults(); } });
+carsEl.addEventListener('keydown', e => { const p = e.target.closest('[data-pt]'); if (p && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); state.pick = state.pick === p.dataset.pt ? null : p.dataset.pt; renderResults(); const again = carsEl.querySelector('[data-pt="' + state.pick + '"]'); if (again) again.focus(); } });
 document.getElementById('hard').addEventListener('change', e => { state.hard = e.target.checked; refresh(); });
 document.getElementById('da').addEventListener('change', e => { state.da = e.target.checked; refresh(); });
 document.getElementById('cov').addEventListener('change', e => { state.cov = e.target.checked; refresh(); });
 document.getElementById('sort').addEventListener('change', e => { state.sort = e.target.value; refresh(); });
-document.getElementById('reset').addEventListener('click', () => { state = freshState(); refresh(); });
+document.getElementById('reset').addEventListener('click', () => { const keep = { view: state.view, x: state.x, y: state.y }; state = freshState(); Object.assign(state, keep); refresh(); });
 
 buildPanel();
 refresh();
