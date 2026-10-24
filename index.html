@@ -1,0 +1,945 @@
+<!doctype html>
+<html lang="en-AU">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>EV selector</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Lora:wght@600;700&display=swap">
+<style>
+/* Layout: criteria panel on the left, matching variants on the right; stacked on phones. */
+:root {
+  --bg: #FFFFFF;
+  --bg-alt: #F4F4F7;
+  --card: #FFFFFF;
+  --border: #D4D4DA;
+  --border-strong: #B8B8C2;
+  --fg: #1A1A2E;
+  --fg-2: #55556A;
+  --accent: #376DA4;
+  --accent-soft: #ECF2FA;
+  --mark: #1D6068;
+  --mark-soft: #E4F4F4;
+  --font-sans: 'Barlow', system-ui, sans-serif;
+  --font-serif: 'Lora', Georgia, serif;
+  --radius: 6px;
+  --radius-lg: 8px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #14141F;
+    --bg-alt: #1B1B2A;
+    --card: #1B1B2A;
+    --border: #34344A;
+    --border-strong: #4C4C66;
+    --fg: #EDEDF0;
+    --fg-2: #A9A9B8;
+    --accent: #8DB8E3;
+    --accent-soft: #222E43;
+    --mark: #5CB8B8;
+    --mark-soft: #1A3034;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #14141F;
+  --bg-alt: #1B1B2A;
+  --card: #1B1B2A;
+  --border: #34344A;
+  --border-strong: #4C4C66;
+  --fg: #EDEDF0;
+  --fg-2: #A9A9B8;
+  --accent: #8DB8E3;
+  --accent-soft: #222E43;
+  --mark: #5CB8B8;
+  --mark-soft: #1A3034;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-sans);
+  font-size: 16px;
+  line-height: 1.55;
+  padding-block: 32px 56px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  -webkit-font-smoothing: antialiased;
+}
+.wrap { max-width: 1180px; margin: 0 auto; }
+h1, h2 { font-family: var(--font-serif); margin: 0; text-wrap: balance; }
+h1 { font-size: 2rem; line-height: 1.25; }
+h2 { font-size: 1.25rem; line-height: 1.3; }
+h3 { font-size: 1.0625rem; line-height: 1.35; margin: 0; font-weight: 600; }
+p { margin: 0; }
+.intro { color: var(--fg-2); margin-top: 8px; }
+.layout { display: grid; grid-template-columns: minmax(0, 360px) minmax(0, 1fr); gap: 32px; margin-top: 28px; align-items: start; }
+@media (max-width: 860px) { .layout { grid-template-columns: minmax(0, 1fr); } }
+.panel { border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--card); padding: 20px; }
+.panel-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.sub { color: var(--fg-2); font-size: 0.875rem; }
+.crit-list { display: flex; flex-direction: column; gap: 0; margin-top: 12px; }
+.crit { border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg); }
+.crit.on { border-color: var(--accent); }
+.crit-toggle {
+  width: 100%; min-height: 48px; display: flex; align-items: center; gap: 12px; text-align: left;
+  background: none; border: 0; color: inherit; font: inherit; padding: 8px 12px; cursor: pointer; border-radius: var(--radius);
+}
+.box { flex: none; width: 20px; height: 20px; border: 2px solid var(--border-strong); border-radius: 4px; display: grid; place-items: center; }
+.crit.on .box { background: var(--accent); border-color: var(--accent); }
+.crit.on .box::after { content: ""; width: 5px; height: 10px; border: solid var(--bg); border-width: 0 2px 2px 0; transform: rotate(45deg) translate(-1px, -1px); }
+.crit-name { font-weight: 600; display: block; }
+.crit-hint { font-size: 0.8125rem; color: var(--fg-2); display: block; line-height: 1.35; }
+.crit-body { padding: 4px 12px 14px 44px; display: flex; flex-direction: column; gap: 12px; }
+.field-label { font-size: 0.8125rem; font-weight: 600; color: var(--fg-2); display: block; margin-bottom: 4px; }
+select, input[type="number"] {
+  font: inherit; color: var(--fg); background: var(--bg); border: 1px solid var(--border-strong);
+  border-radius: var(--radius); min-height: 44px; padding: 6px 10px; max-width: 100%;
+}
+select { width: 100%; }
+input[type="number"] { width: 130px; font-variant-numeric: tabular-nums; }
+.limit-row { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+.limit-row .unit { color: var(--fg-2); font-size: 0.875rem; }
+.seg { display: flex; border: 1px solid var(--border-strong); border-radius: var(--radius); overflow: hidden; }
+.seg button { flex: 1; min-height: 44px; background: var(--bg); color: var(--fg); border: 0; font: inherit; font-size: 0.875rem; cursor: pointer; border-left: 1px solid var(--border-strong); }
+.seg button:first-child { border-left: 0; }
+.seg button[aria-pressed="true"] { background: var(--accent); color: var(--bg); font-weight: 600; }
+.opts { display: flex; flex-direction: column; gap: 2px; }
+.opt { display: flex; align-items: center; gap: 10px; min-height: 44px; cursor: pointer; font-size: 0.9375rem; }
+.opt input { width: 18px; height: 18px; accent-color: var(--accent); flex: none; }
+.opt .count { margin-left: auto; color: var(--fg-2); font-size: 0.8125rem; font-variant-numeric: tabular-nums; }
+.tools { display: flex; flex-direction: column; gap: 12px; margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--border); }
+.check { display: flex; align-items: flex-start; gap: 10px; min-height: 44px; cursor: pointer; font-size: 0.9375rem; }
+.check input { width: 18px; height: 18px; accent-color: var(--accent); margin-top: 3px; flex: none; }
+.btn { font: inherit; font-size: 0.875rem; font-weight: 600; min-height: 44px; padding: 0 16px; border-radius: var(--radius); border: 1px solid var(--border-strong); background: var(--bg); color: var(--fg); cursor: pointer; }
+.btn:hover { border-color: var(--accent); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.results-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.results-head .sort { min-width: 200px; }
+.summary { margin-top: 6px; color: var(--fg-2); font-size: 0.9375rem; }
+.example { margin-top: 14px; background: var(--accent-soft); border-radius: var(--radius); padding: 10px 14px; font-size: 0.875rem; }
+.cars { display: flex; flex-direction: column; gap: 12px; margin-top: 16px; }
+.car { border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--card); padding: 12px 16px; }
+.car-top { display: grid; grid-template-columns: 210px minmax(0, 1fr) 150px; align-items: start; gap: 8px 28px; }
+@media (max-width: 640px) { .car-top, .car-top.nomatch { grid-template-columns: minmax(0, 1fr) auto; } .car-top .specs { grid-column: 1 / -1; order: 3; grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+.car-title { min-width: 0; }
+.car-title .brand { font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--fg-2); font-weight: 600; }
+.match { text-align: right; min-width: 96px; }
+.match strong { font-size: 1.5rem; font-variant-numeric: tabular-nums; line-height: 1; font-weight: 600; }
+.match small { display: block; color: var(--fg-2); font-size: 0.75rem; margin-top: 2px; }
+.bar { height: 6px; background: var(--bg-alt); border-radius: 3px; margin-top: 6px; overflow: hidden; border: 1px solid var(--border); }
+.bar span { display: block; height: 100%; background: var(--mark); }
+.specs { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr); gap: 6px 20px; margin: 0; }
+.specs div { min-width: 0; }
+.specs dt { font-size: 0.75rem; color: var(--fg-2); font-weight: 500; }
+.specs dd { margin: 0; font-variant-numeric: tabular-nums; font-weight: 500; overflow-wrap: anywhere; }
+.car-mid { display: grid; grid-template-columns: 210px minmax(0, 1fr); gap: 8px 28px; margin-top: 10px; align-items: start; }
+@media (max-width: 640px) { .car-mid { grid-template-columns: minmax(0, 1fr); } }
+.car-mid .match { text-align: left; min-width: 0; }
+.car-mid .fits { margin: 0; flex-direction: column; flex-wrap: nowrap; gap: 4px; }
+.car-mid .fit { border: 0; padding: 0; border-radius: 0; min-height: 24px; background: none; }
+.car-top.nomatch { grid-template-columns: 210px minmax(0, 1fr); }
+.specs dd { white-space: nowrap; }
+.specs .basis { display: block; font-size: 0.75rem; color: var(--fg-2); line-height: 1.3; margin-top: 2px; }
+.specs dd.na { color: var(--fg-2); font-weight: 400; }
+.fits { list-style: none; padding: 0; margin: 10px 0 0; display: flex; flex-wrap: wrap; gap: 8px; }
+.fit { display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--border); border-radius: 9999px; padding: 4px 12px 4px 8px; font-size: 0.8125rem; min-height: 28px; background: var(--bg); }
+.dot { width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--mark); flex: none; }
+.dot.full { background: var(--mark); }
+.dot.half { background: linear-gradient(90deg, var(--mark) 50%, transparent 50%); }
+.dot.empty { background: transparent; }
+.dot.none { border-style: dashed; border-color: var(--fg-2); }
+.note { margin-top: 8px; color: var(--fg-2); font-size: 0.8125rem; max-width: 80ch; }
+.empty-state { border: 1px dashed var(--border-strong); border-radius: var(--radius-lg); padding: 28px; color: var(--fg-2); text-align: center; }
+.legend { display: flex; flex-wrap: wrap; gap: 8px 18px; margin-top: 14px; font-size: 0.8125rem; color: var(--fg-2); }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.about { margin-top: 36px; border-top: 1px solid var(--border); padding-top: 20px; max-width: 80ch; color: var(--fg-2); font-size: 0.875rem; display: flex; flex-direction: column; gap: 10px; }
+.about h2 { color: var(--fg); font-size: 1.0625rem; }
+.about a { color: var(--accent); }
+.grp-box { border-top: 1px solid var(--border); }
+.grp-box:first-child { border-top: 0; }
+.grp { margin: 0; font-family: var(--font-sans); font-size: 1rem; font-weight: 700; }
+.grp-btn { width: 100%; min-height: 48px; display: flex; align-items: center; gap: 10px; background: none; border: 0; color: inherit; font: inherit; font-weight: 700; text-align: left; cursor: pointer; padding: 0; }
+.gcount { margin-left: auto; font-size: 0.8125rem; font-weight: 500; color: var(--accent); }
+.chev { flex: none; width: 8px; height: 8px; border: solid var(--fg-2); border-width: 0 2px 2px 0; transform: rotate(45deg); margin: 0 4px 3px 4px; }
+.grp-btn[aria-expanded="true"] .chev { transform: rotate(-135deg); margin-top: 5px; }
+.grp-body { display: flex; flex-direction: column; gap: 10px; padding-bottom: 14px; }
+.grp-sub { color: var(--fg-2); font-size: 0.8125rem; margin: 2px 0 0; }
+.need { color: var(--fg-2); font-size: 0.8125rem; }
+.exp-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px 16px; margin: 14px 0 0; padding-top: 12px; border-top: 1px solid var(--border); }
+.exp-grid div { min-width: 0; }
+.exp-grid dt { font-size: 0.75rem; color: var(--fg-2); font-weight: 500; }
+.exp-grid dd { margin: 0; font-size: 0.875rem; font-weight: 500; }
+.exp-grid dd.na { color: var(--fg-2); font-weight: 400; }
+.exp-grid dd small { display: block; font-size: 0.75rem; color: var(--fg-2); font-weight: 400; }
+.said { margin-top: 6px; font-size: 0.8125rem; color: var(--fg-2); }
+.said summary { cursor: pointer; min-height: 32px; display: flex; align-items: center; color: var(--accent); font-weight: 600; }
+.said ul { margin: 6px 0 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; max-width: 80ch; }
+.said b { color: var(--fg); font-weight: 600; }
+@media (prefers-reduced-motion: reduce) { * { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; } }
+</style>
+</head>
+<body>
+
+
+<div class="wrap">
+  <h1>EV selector</h1>
+  <p class="intro">Choose the things that matter to you, then say what you would prefer within each. The results show how closely each variant matches. Nothing here rates a car as good or bad. Driving and comfort criteria such as seating position, visibility and adaptive cruise come from published reviews, so they exist for fewer models. Each finding says how many outlets reported it, and a dash means nothing was found.</p>
+
+  <div class="layout">
+    <section class="panel" aria-labelledby="crit-title">
+      <div class="panel-head">
+        <div>
+          <h2 id="crit-title">What matters to you</h2>
+        </div>
+        <button class="btn" id="reset" type="button">Clear all</button>
+      </div>
+      <p class="sub" style="margin-top:6px">Tick a criterion, then set your preference and how important it is.</p>
+      <div class="crit-list" id="crit-list"></div>
+      <div class="tools">
+        <label class="check" for="hard"><input type="checkbox" id="hard"><span>Hide variants that miss a limit or an accepted option you set</span></label>
+        <label class="check" for="da"><input type="checkbox" id="da"><span>Only show variants with a drive-away price, so prices compare on one basis</span></label>
+        <label class="check" for="cov"><input type="checkbox" id="cov"><span>Only show variants with data for every criterion I chose</span></label>
+      </div>
+    </section>
+
+    <section aria-labelledby="res-title">
+      <div class="results-head">
+        <div>
+          <h2 id="res-title">Matching variants</h2>
+        </div>
+        <div class="sort">
+          <label class="field-label" for="sort">Sort by</label>
+          <select id="sort">
+            <option value="match">Closest match</option>
+            <option value="conf">Most confirmed (missing data counts as no match)</option>
+            <option value="price">Price, low to high</option>
+            <option value="range">Range, high to low</option>
+            <option value="brand">Brand and model</option>
+          </select>
+        </div>
+      </div>
+      <p class="summary" id="summary" aria-live="polite"></p>
+      <div class="example" id="example" hidden>Example selection loaded: visibility reported as good and adaptive cruise without complaints (both high importance), servicing at most $500 a year, and power as a low importance preference. Change or clear it to suit you.</div>
+      <div class="legend" aria-label="How to read the match markers">
+        <span><i class="dot full"></i>Matches</span>
+        <span><i class="dot half"></i>Partly matches</span>
+        <span><i class="dot empty"></i>Does not match</span>
+        <span><i class="dot none"></i>No data found</span>
+      </div>
+      <div class="cars" id="cars"></div>
+    </section>
+  </div>
+
+  <div class="about">
+    <h2>About this data</h2>
+    <p>The first 18 variants (Kia EV5 and EV6, Skoda Enyaq, BYD Sealion 7, Toyota bZ4X, Subaru Trailseeker and Volkswagen ID.4) come from research compiled on 21 September 2026, mostly from ACT configurator screenshots and dealer quotes. The remaining variants were added on 24 October 2026 from the public sources listed below.</p>
+    <p>Driving and comfort findings (seating position, visibility, instrument display and head-up display, adaptive cruise, infotainment, screen format, physical controls, CarPlay and audio) were added on 24 October 2026. Head-up display is recorded per grade where the review names the grade. They come from the earlier research, from Australian reviews read on that date (CarExpert, The Beep, GoAuto, RACQ, Chasing Cars) and from own test drives. Each finding says whether several outlets, one outlet or an own test drive reported it. One outlet is a lead, not a settled view, so check it on a test drive. Findings are held per model and cover only the models listed with a result, which is a minority of the variants here. Reviews of an older model year may not match the current car. Cybersecurity is a brand-level finding from public investigations and reporting, and the absence of a report is not evidence that a brand is secure.</p>
+    <p>Prices are on different bases. Each variant states its basis: ACT, Sydney or NSW drive-away, drive-away with no state given, or before on-road costs. A price before on-road costs excludes registration, stamp duty and delivery, so it reads lower than a drive-away price for the same car. Use the drive-away filter to compare prices on one basis.</p>
+    <p>A match score only uses criteria that have data for that variant. A dash, or a dashed marker, means no figure was found after a second search on 24 October 2026, which is different from a failed match. Where sources disagree, the card says so and the figure is left blank. Relative preferences such as "prefer lower" compare each variant with the others in this list, not with the whole market.</p>
+    <p>Prices, offers and warranty terms change often, so confirm them with a dealer. Kia servicing figures are the seven-service prepaid price divided by seven, which assumes a service every year.</p>
+    <p>Sources:
+      <a href="https://www.carexpert.com.au/" target="_blank" rel="noopener">CarExpert</a>,
+      <a href="https://www.carsales.com.au/research/" target="_blank" rel="noopener">Carsales</a>,
+      <a href="https://evcentral.com.au/" target="_blank" rel="noopener">EV Central</a>,
+      <a href="https://thebeep.com.au/" target="_blank" rel="noopener">The Beep</a>,
+      <a href="https://www.chasingcars.com.au/" target="_blank" rel="noopener">Chasing Cars</a>,
+      <a href="https://www.goauto.com.au/" target="_blank" rel="noopener">GoAuto</a>,
+      <a href="https://thedriven.io/" target="_blank" rel="noopener">The Driven</a>,
+      <a href="https://www.ancap.com.au/" target="_blank" rel="noopener">ANCAP</a>,
+      <a href="https://www.mynrma.com.au/open-road/car-reviews" target="_blank" rel="noopener">NRMA</a>,
+      <a href="https://tynan.com.au/" target="_blank" rel="noopener">Tynan</a>,
+      <a href="https://theevreport.com/" target="_blank" rel="noopener">The EV Report</a>,
+      <a href="https://www.kia.com/au/owners/prepaid-servicing.html" target="_blank" rel="noopener">Kia prepaid service plans</a>,
+      and the Tesla Australia warranty page.</p>
+  </div>
+</div>
+
+<script>
+/* Data */
+const DATA = [
+  { id:'ev5-air-sr', brand:'Kia', model:'EV5', variant:'Air Standard Range', price:49990, range:400, drive:'FWD', power:null, warranty:7, battery:7, service:524, ancap:null,
+    note:'Price is from an earlier comparison chart and its drive-away basis was not separately confirmed. Servicing is the EV5 seven-year capped price of $3,667, applied across the model.' },
+  { id:'ev5-air-lr', brand:'Kia', model:'EV5', variant:'Air Long Range', price:59990, range:555, drive:'FWD', power:null, warranty:7, battery:7, service:524, ancap:null,
+    note:'Price is from an earlier comparison chart and its drive-away basis was not separately confirmed. Servicing is the EV5 seven-year capped price of $3,667, applied across the model.' },
+  { id:'ev5-earth', brand:'Kia', model:'EV5', variant:'Earth', price:64990, range:500, drive:'AWD', power:null, warranty:7, battery:7, service:524, ancap:null,
+    note:'Servicing is the EV5 seven-year capped price of $3,667, about $524 a year.' },
+  { id:'ev5-gtline', brand:'Kia', model:'EV5', variant:'GT-Line', price:75990, range:470, drive:'AWD', power:null, warranty:7, battery:7, service:524, ancap:null,
+    note:'Price is from an earlier comparison chart and its drive-away basis was not separately confirmed. Servicing is the EV5 seven-year capped price of $3,667, applied across the model.' },
+
+  { id:'ev6-air', brand:'Kia', model:'EV6', variant:'Air', price:77815, range:582, drive:'RWD', power:168, warranty:7, battery:7, service:null, ancap:null, note:'ACT drive-away price confirmed from a configurator screenshot.' },
+  { id:'ev6-gtline-rwd', brand:'Kia', model:'EV6', variant:'GT-Line RWD', price:85161, range:560, drive:'RWD', power:168, warranty:7, battery:7, service:null, ancap:null, note:'ACT drive-away price confirmed from a configurator screenshot.' },
+  { id:'ev6-gtline-awd', brand:'Kia', model:'EV6', variant:'GT-Line AWD', price:93801, range:522, drive:'AWD', power:239, warranty:7, battery:7, service:null, ancap:null, note:'ACT drive-away price confirmed from a configurator screenshot.' },
+  { id:'ev6-gt', brand:'Kia', model:'EV6', variant:'GT', price:110088, range:450, drive:'AWD', power:478, warranty:7, battery:7, service:null, ancap:null, note:'ACT drive-away price confirmed from a configurator screenshot.' },
+
+  { id:'enyaq-60', brand:'Skoda', model:'Enyaq', variant:'60 Select', price:54990, range:410, drive:'RWD', power:150, warranty:7, battery:8, service:195, ancap:'carry',
+    note:'Price is from a dealer stock listing. No driving review had been found for this variant. The crash rating is carried over from a 2021 Euro NCAP result. Servicing is $1,950 over ten years.' },
+  { id:'enyaq-85', brand:'Skoda', model:'Enyaq', variant:'85 Sportline', price:63900, range:547, drive:'RWD', power:210, warranty:7, battery:8, service:195, ancap:'carry',
+    note:'The crash rating is carried over from a 2021 Euro NCAP result. Servicing is $1,950 over ten years. The car has no spare wheel, only a tyre repair kit.' },
+
+  { id:'sealion-premium', brand:'BYD', model:'Sealion 7', variant:'Premium', price:54990, range:482, drive:'RWD', power:230, warranty:6, battery:8, service:415, ancap:null,
+    note:'Vehicle warranty is 6 years or 150,000 km. Servicing is $4,157 over ten years.' },
+  { id:'sealion-performance', brand:'BYD', model:'Sealion 7', variant:'Performance', price:63990, range:456, drive:'AWD', power:390, warranty:6, battery:8, service:415, ancap:null,
+    note:'Power is the combined figure for two motors, shown as about 390 kW. Vehicle warranty is 6 years or 150,000 km. Servicing is $4,157 over ten years.' },
+
+  { id:'bz4x-2wd', brand:'Toyota', model:'bZ4X', variant:'2WD', price:60743, range:591, drive:'FWD', power:160, warranty:5, battery:8, service:180, ancap:'carry',
+    note:'Power is approximate. Servicing is capped at $180 a visit for five services, on 12-month or 15,000 km intervals. The crash rating is carried over from 2022 testing of the bZ4X.' },
+  { id:'bz4x-awd', brand:'Toyota', model:'bZ4X', variant:'AWD', price:73223, range:517, drive:'AWD', power:252, warranty:5, battery:8, service:180, ancap:'carry',
+    note:'Servicing is capped at $180 a visit for five services, on 12-month or 15,000 km intervals. The crash rating is carried over from 2022 testing of the bZ4X.' },
+  { id:'bz4x-touring', brand:'Toyota', model:'bZ4X', variant:'Touring AWD', price:75303, range:488, drive:'AWD', power:280, warranty:5, battery:8, service:180, ancap:'carry',
+    note:'Servicing is capped at $180 a visit for five services, on 12-month or 15,000 km intervals. The crash rating is carried over from 2022 testing of the bZ4X.' },
+
+  { id:'trail-awd', brand:'Subaru', model:'Trailseeker', variant:'AWD', price:68964, range:533, drive:'AWD', power:280, warranty:null, battery:null, service:null, ancap:'none',
+    note:'Price is a drive-away dealer quote. ANCAP had not independently tested this model when the data was compiled. Warranty and servicing figures were not collected.' },
+  { id:'trail-touring', brand:'Subaru', model:'Trailseeker', variant:'AWD Touring', price:75204, range:488, drive:'AWD', power:280, warranty:null, battery:null, service:null, ancap:'none',
+    note:'Price is a drive-away dealer quote. ANCAP had not independently tested this model when the data was compiled. Warranty and servicing figures were not collected.' },
+
+  { id:'id4-pro', brand:'Volkswagen', model:'ID.4', variant:'Pro', price:65038, range:531, drive:'RWD', power:210, warranty:5, battery:null, service:295, ancap:'aus',
+    note:'Servicing is the midpoint of an estimated $290 to $300 a year. Battery warranty was not collected.' },
+
+  /* Added 24 October 2026 */
+  { id:'my-rwd', brand:'Tesla', model:'Model Y', variant:'Premium RWD', pb:'da', basis:'Sydney drive-away', price:63963, range:466, drive:'RWD', power:null, warranty:5, battery:null, service:null, ancap:null,
+    note:'Price is the CarExpert Sydney drive-away figure. Tesla advertises this variant from $58,900 before on-road costs. The 466 km range is from earlier research. Warranty is five years with unlimited kilometres for cars delivered from 1 January 2026.' },
+  { id:'my-lr', brand:'Tesla', model:'Model Y', variant:'Premium Long Range', pb:'da', basis:'Sydney drive-away', price:74463, range:null, drive:'AWD', power:null, warranty:5, battery:null, service:null, ancap:null,
+    note:'Price is the CarExpert Sydney drive-away figure. Range and power were not reliably matched to this variant in the sources.' },
+  { id:'my-l', brand:'Tesla', model:'Model Y', variant:'L Premium Long Range (six seats)', pb:'da', basis:'Sydney drive-away', price:80763, range:null, drive:'AWD', power:null, warranty:5, battery:null, service:null, ancap:null,
+    note:'Price is the CarExpert Sydney drive-away figure. Range and power were not reliably matched to this variant in the sources.' },
+  { id:'my-perf', brand:'Tesla', model:'Model Y', variant:'Performance', pb:'da', basis:'Sydney drive-away', price:95988, range:null, drive:'AWD', power:null, warranty:5, battery:null, service:null, ancap:null,
+    note:'Price is the CarExpert Sydney drive-away figure. Sources give two different power figures for this variant (338 kW and 393 kW), so none is shown.' },
+
+  { id:'elexio-base', brand:'Hyundai', model:'Elexio', variant:'Base', pb:'da', basis:'Drive-away, state not given', price:57990, range:562, drive:'FWD', power:160, warranty:7, battery:null, service:null, ancap:null,
+    note:'Prices, range and power are from The Beep. Battery warranty, ANCAP and servicing were not stated.' },
+  { id:'elexio-elite', brand:'Hyundai', model:'Elexio', variant:'Elite', pb:'da', basis:'Drive-away, state not given', price:60990, range:546, drive:'FWD', power:160, warranty:7, battery:null, service:null, ancap:null,
+    note:'Prices, range and power are from The Beep. Earlier research gave $59,990 drive-away for this variant, so confirm the current price with the dealer.' },
+  { id:'kona-sr', brand:'Hyundai', model:'Kona Electric', variant:'Standard Range', pb:'boc', basis:'Before on-road costs', price:45990, range:null, drive:null, power:null, warranty:null, battery:null, service:null, ancap:null,
+    note:'Price is after the $8,000 reduction reported by Chasing Cars. Range, power and warranty were not collected.' },
+  { id:'kona-er', brand:'Hyundai', model:'Kona Electric', variant:'Extended Range', pb:'boc', basis:'Before on-road costs', price:50000, range:null, drive:null, power:null, warranty:null, battery:null, service:null, ancap:null,
+    note:'Price is rounded to the nearest $1,000 in the source. Range, power and warranty were not collected.' },
+  { id:'kona-elite', brand:'Hyundai', model:'Kona Electric', variant:'Elite', pb:'boc', basis:'Before on-road costs', price:53000, range:null, drive:null, power:null, warranty:null, battery:null, service:null, ancap:null,
+    note:'Price is rounded to the nearest $1,000 in the source. This is a new grade for the 2027 model year. Range, power and warranty were not collected.' },
+  { id:'kona-premium', brand:'Hyundai', model:'Kona Electric', variant:'Premium', pb:'boc', basis:'Before on-road costs', price:60000, range:null, drive:null, power:null, warranty:null, battery:null, service:null, ancap:null,
+    note:'Price is rounded to the nearest $1,000 in the source. Range, power and warranty were not collected.' },
+  { id:'kona-nline', brand:'Hyundai', model:'Kona Electric', variant:'Premium N Line', pb:'boc', basis:'Before on-road costs', price:63000, range:null, drive:null, power:null, warranty:null, battery:null, service:null, ancap:null,
+    note:'Price is rounded to the nearest $1,000 in the source. Range, power and warranty were not collected.' },
+  { id:'i5-rwd', brand:'Hyundai', model:'Ioniq 5', variant:'RWD', pb:'boc', basis:'Before on-road costs', price:68200, range:570, drive:'RWD', power:168, warranty:null, battery:8, service:null, ancap:null,
+    note:'Price is after the $8,000 reduction. Range and power are from a December 2025 GoAuto line-up article. Sources disagree on the vehicle warranty (5 or 7 years), so none is shown.' },
+  { id:'i5-elite', brand:'Hyundai', model:'Ioniq 5', variant:'Elite', pb:'boc', basis:'Before on-road costs', price:73200, range:530, drive:'RWD', power:168, warranty:null, battery:8, service:null, ancap:null,
+    note:'Price is after the $8,000 reduction. Range and power are from a December 2025 GoAuto line-up article. Sources disagree on the vehicle warranty (5 or 7 years), so none is shown.' },
+  { id:'i5-nline', brand:'Hyundai', model:'Ioniq 5', variant:'N Line Premium', pb:'boc', basis:'Before on-road costs', price:83700, range:495, drive:'AWD', power:239, warranty:null, battery:8, service:null, ancap:null,
+    note:'Price is after the $8,000 reduction. Range and power are from a December 2025 GoAuto line-up article. Sources disagree on the vehicle warranty (5 or 7 years), so none is shown.' },
+  { id:'i5-n', brand:'Hyundai', model:'Ioniq 5', variant:'N', pb:'boc', basis:'Before on-road costs', price:115000, range:448, drive:null, power:448, warranty:null, battery:8, service:null, ancap:null,
+    note:'Price was not discounted. Power is 448 kW in GoAuto and Carsales and 478 kW in CarExpert. Range is a claimed figure before plugging in.' },
+
+  { id:'zx-base', brand:'Zeekr', model:'7X', variant:'Base', pb:'da', basis:'Sydney drive-away', price:62913, range:null, drive:'RWD', power:310, warranty:5, battery:null, service:null, ancap:null,
+    note:'Price is the CarExpert Sydney drive-away figure, from $57,900 before on-road costs. CarExpert lists $57,900 as the starting price in one place and $62,913 in another, so confirm the figure with a dealer.' },
+  { id:'zx-lr', brand:'Zeekr', model:'7X', variant:'Long Range', pb:'da', basis:'Sydney drive-away', price:69213, range:null, drive:'RWD', power:310, warranty:5, battery:null, service:null, ancap:null,
+    note:'Price is the CarExpert Sydney drive-away figure, from $63,900 before on-road costs. WLTP range was not stated in the sources.' },
+  { id:'zx-perf', brand:'Zeekr', model:'7X', variant:'Performance', pb:'da', basis:'Sydney drive-away', price:78663, range:null, drive:null, power:475, warranty:5, battery:null, service:null, ancap:null,
+    note:'Price is the CarExpert Sydney drive-away figure. The sources did not map a drivetrain to this variant.' },
+  { id:'zx-black', brand:'Zeekr', model:'7X', variant:'Black Edition', pb:'da', basis:'Sydney drive-away', price:81813, range:null, drive:null, power:475, warranty:5, battery:null, service:null, ancap:null,
+    note:'Price is the CarExpert Sydney drive-away figure. The sources did not map a drivetrain to this variant.' },
+
+  { id:'mg-s5', brand:'MG', model:'S5 EV', variant:'Essence 62', pb:'da', basis:'Drive-away, dealer listing', price:52490, range:450, drive:'RWD', power:null, warranty:null, battery:null, service:null, ancap:'aus',
+    note:'Price is from a Carsales dealer listing. Power is shown as 150 kW in the specifications and 125 kW in the description, and the warranty as 7 years in one place and 10 years in another, so none is shown. ANCAP assessed the model in 2025 and gave it five stars.' },
+  { id:'mg-zs', brand:'MG', model:'ZS EV', variant:'Excite Standard Range', pb:'da', basis:'Drive-away, from price', price:34990, range:320, drive:'FWD', power:130, warranty:7, battery:null, service:null, ancap:null,
+    note:'Price is a starting price from a Gridly article, which does not state the date. The page gave no ANCAP or servicing figures.' },
+
+  { id:'atto1-ess', brand:'BYD', model:'Atto 1', variant:'Essential', pb:'da', basis:'Drive-away, national offer to 15 Dec 2026', price:19990, range:220, drive:null, power:65, warranty:null, battery:null, service:null, ancap:'aus',
+    note:'The price is a limited-time national offer. ANCAP gave the Atto 1 five stars in 2025 testing.' },
+  { id:'atto1-prem', brand:'BYD', model:'Atto 1', variant:'Premium', pb:'boc', basis:'Before on-road costs', price:27990, range:310, drive:null, power:115, warranty:null, battery:null, service:null, ancap:null,
+    note:'No national drive-away offer applies to this variant.' },
+  { id:'atto2-dyn', brand:'BYD', model:'Atto 2', variant:'Dynamic', pb:'boc', basis:'Before on-road costs', price:31990, range:345, drive:'FWD', power:130, warranty:null, battery:null, service:null, ancap:null,
+    note:'Price is the launch price from an EV Central article, so check current offers.' },
+  { id:'atto2-prem', brand:'BYD', model:'Atto 2', variant:'Premium', pb:'boc', basis:'Before on-road costs', price:35990, range:345, drive:'FWD', power:130, warranty:null, battery:null, service:null, ancap:null,
+    note:'Price is the launch price from an EV Central article, so check current offers.' },
+  { id:'atto3-ess', brand:'BYD', model:'Atto 3', variant:'Essential', pb:'da', basis:'Indicative drive-away, lower end', price:41762, range:null, drive:null, power:null, warranty:6, battery:8, service:null, ancap:'aus',
+    note:'Carsales gives an indicative range of $41,762 to $44,293, and current dealer listings are lower. Range for the model runs from 345 to 420 km, and the page does not say which grade has which.' },
+  { id:'atto3-prem', brand:'BYD', model:'Atto 3', variant:'Premium', pb:'da', basis:'Indicative drive-away, lower end', price:46762, range:420, drive:'FWD', power:150, warranty:6, battery:8, service:null, ancap:'aus',
+    note:'Carsales gives an indicative range of $46,762 to $49,927, and current dealer listings are lower. ANCAP awarded five stars in 2022.' },
+
+  { id:'ev3-air-sr', brand:'Kia', model:'EV3', variant:'Air Standard Range', pb:'da', basis:'NSW drive-away', price:51880, range:436, drive:'FWD', power:150, warranty:7, battery:8, service:278, ancap:null,
+    note:'Prices, range and power are from EV Central. Servicing is Kia\'s seven-service prepaid price of $1,946 divided by seven. Sources differ on battery cover (7 or 8 years) and EV Central says 8.' },
+  { id:'ev3-air-lr', brand:'Kia', model:'EV3', variant:'Air Long Range', pb:'da', basis:'NSW drive-away', price:57865, range:604, drive:'FWD', power:150, warranty:7, battery:8, service:278, ancap:null,
+    note:'Prices, range and power are from EV Central. Servicing is Kia\'s seven-service prepaid price of $1,946 divided by seven. Sources differ on battery cover (7 or 8 years) and EV Central says 8.' },
+  { id:'ev3-earth', brand:'Kia', model:'EV3', variant:'Earth', pb:'boc', basis:'Before on-road costs, estimated', price:58600, range:563, drive:'FWD', power:150, warranty:7, battery:8, service:278, ancap:null,
+    note:'EV Central gives no drive-away price for this grade, and its list price is partly estimated. Servicing is Kia\'s seven-service prepaid price of $1,946 divided by seven.' },
+  { id:'ev3-gtline', brand:'Kia', model:'EV3', variant:'GT-Line', pb:'da', basis:'NSW drive-away', price:69100, range:563, drive:'FWD', power:150, warranty:7, battery:8, service:278, ancap:null,
+    note:'Servicing is Kia\'s seven-service prepaid price of $1,946 divided by seven.' },
+  { id:'ev3-gtline-awd', brand:'Kia', model:'EV3', variant:'GT-Line AWD', pb:'da', basis:'NSW drive-away', price:71725, range:559, drive:'AWD', power:195, warranty:7, battery:8, service:278, ancap:null,
+    note:'Servicing is Kia\'s seven-service prepaid price of $1,946 divided by seven.' },
+  { id:'ev4-air', brand:'Kia', model:'EV4', variant:'Air', pb:'da', basis:'NSW drive-away', price:52990, range:456, drive:'FWD', power:150, warranty:7, battery:8, service:276, ancap:null,
+    note:'Prices and specifications are from EV Central. Servicing is Kia\'s seven-service prepaid price of $1,929 divided by seven. EV Central lists five stars for ANCAP, while another source says the model was not yet tested, so the status is blank.' },
+  { id:'ev4-earth', brand:'Kia', model:'EV4', variant:'Earth', pb:'da', basis:'NSW drive-away', price:65050, range:612, drive:'FWD', power:150, warranty:7, battery:8, service:276, ancap:null,
+    note:'Servicing is Kia\'s seven-service prepaid price of $1,929 divided by seven. The ANCAP status is blank because sources conflict.' },
+  { id:'ev4-gtline', brand:'Kia', model:'EV4', variant:'GT-Line', pb:'da', basis:'NSW drive-away', price:70825, range:612, drive:'FWD', power:150, warranty:7, battery:8, service:276, ancap:null,
+    note:'Servicing is Kia\'s seven-service prepaid price of $1,929 divided by seven. The ANCAP status is blank because sources conflict.' },
+
+  { id:'ex30-plus', brand:'Volvo', model:'EX30', variant:'Single Motor Extended Range Plus', pb:'boc', basis:'Before on-road costs', price:49990, range:462, drive:'RWD', power:200, warranty:null, battery:null, service:null, ancap:null,
+    note:'Price is after the April 2026 reduction. Warranty, ANCAP and servicing were not stated.' },
+  { id:'ex30-ultra', brand:'Volvo', model:'EX30', variant:'Single Motor Extended Range Ultra', pb:'boc', basis:'Before on-road costs', price:54990, range:462, drive:'RWD', power:200, warranty:null, battery:null, service:null, ancap:null,
+    note:'Price is after the April 2026 reduction. The 462 km figure is given once for both single-motor grades.' },
+  { id:'ex30-cc', brand:'Volvo', model:'EX30', variant:'Cross Country AWD', pb:'boc', basis:'Before on-road costs', price:62990, range:417, drive:'AWD', power:315, warranty:null, battery:null, service:null, ancap:null,
+    note:'Warranty, ANCAP and servicing were not stated.' },
+  { id:'ex40-ultra', brand:'Volvo', model:'EX40', variant:'Single Motor Extended Range Ultra', pb:'boc', basis:'Before on-road costs', price:69990, range:520, drive:'RWD', power:185, warranty:null, battery:null, service:null, ancap:null,
+    note:'Price is after the April 2026 reduction. Warranty, ANCAP and servicing were not stated.' },
+  { id:'ex40-twin', brand:'Volvo', model:'EX40', variant:'Twin Motor Ultra', pb:'boc', basis:'Before on-road costs', price:74990, range:485, drive:'AWD', power:300, warranty:null, battery:null, service:null, ancap:null,
+    note:'Price is after the April 2026 reduction. Warranty, ANCAP and servicing were not stated.' },
+  { id:'ex5-complete', brand:'Geely', model:'EX5', variant:'Complete', pb:'da', basis:'Sydney drive-away', price:46267, range:430, drive:'FWD', power:160, warranty:7, battery:8, service:null, stars:5, ancap:null,
+    note:'Price is the CarExpert Sydney drive-away figure, from $43,490 before on-road costs (a leaked, unconfirmed figure). Warranty is seven years and the battery eight years, from The Driven at launch. CarExpert did not state the warranty period in its review. The five stars follow reports of a top ANCAP score. The ANCAP page lists a 2025 rating for all variants but did not show the star count or the test location when read. No servicing price was found: Geely offered three years of free scheduled servicing at launch.' },
+  { id:'ex5-inspire', brand:'Geely', model:'EX5', variant:'Inspire', pb:'da', basis:'Sydney drive-away', price:50407, range:410, drive:'FWD', power:160, warranty:7, battery:8, service:null, stars:5, ancap:null,
+    note:'Price is the CarExpert Sydney drive-away figure, from $47,490 before on-road costs (a leaked, unconfirmed figure). Warranty is seven years and the battery eight years, from The Driven at launch. The five stars follow reports of a top ANCAP score. The ANCAP page lists a 2025 rating for all variants but did not show the star count or the test location when read. No servicing price was found.' }
+];
+
+/* Price basis and corrections for the first set of variants. */
+const PATCH = {
+  'ev5-air-sr':  { pb:'unk', basis:'Basis not confirmed', service:413, note:'Price is from an earlier comparison chart and its drive-away basis was not separately confirmed. Servicing is Kia\'s seven-service prepaid price for the EV5 Air ($2,892) divided by seven.' },
+  'ev5-air-lr':  { pb:'unk', basis:'Basis not confirmed', service:413, note:'Price is from an earlier comparison chart and its drive-away basis was not separately confirmed. Servicing is Kia\'s seven-service prepaid price for the EV5 Air ($2,892) divided by seven.' },
+  'ev5-earth':   { pb:'da',  basis:'Drive-away', note:'Servicing is Kia\'s seven-service prepaid price of $3,667 divided by seven.' },
+  'ev5-gtline':  { pb:'unk', basis:'Basis not confirmed', service:524, note:'Price is from an earlier comparison chart and its drive-away basis was not separately confirmed. Servicing is Kia\'s seven-service prepaid price of $3,667 divided by seven.' },
+  'ev6-air':     { pb:'da', basis:'ACT drive-away', service:305, note:'ACT drive-away price confirmed from a configurator screenshot. Servicing is Kia\'s seven-service prepaid price of $2,136 divided by seven.' },
+  'ev6-gtline-rwd': { pb:'da', basis:'ACT drive-away', service:305, note:'ACT drive-away price confirmed from a configurator screenshot. Servicing is Kia\'s seven-service prepaid price of $2,136 divided by seven.' },
+  'ev6-gtline-awd': { pb:'da', basis:'ACT drive-away', service:305, note:'ACT drive-away price confirmed from a configurator screenshot. Servicing is Kia\'s seven-service prepaid price of $2,136 divided by seven.' },
+  'ev6-gt':      { pb:'da', basis:'ACT drive-away', service:344, note:'ACT drive-away price confirmed from a configurator screenshot. Servicing is Kia\'s seven-service prepaid price of $2,409 divided by seven.' },
+  'enyaq-60':    { pb:'da', basis:'Drive-away, dealer listing' },
+  'enyaq-85':    { pb:'da', basis:'Drive-away, approximate' },
+  'sealion-premium':     { pb:'da', basis:'Drive-away' },
+  'sealion-performance': { pb:'da', basis:'Drive-away' },
+  'bz4x-2wd':    { pb:'da', basis:'ACT drive-away' },
+  'bz4x-awd':    { pb:'da', basis:'ACT drive-away' },
+  'bz4x-touring':{ pb:'da', basis:'ACT drive-away' },
+  'trail-awd':   { pb:'da', basis:'Drive-away, dealer quote', warranty:5, battery:8, ancap:null,
+    note:'Price is a drive-away dealer quote. Warranty and battery cover are from Carsales. Servicing is every 12 months or 15,000 km, with no price published. Carsales lists five ANCAP stars while earlier research found no independent test, so the status is blank.' },
+  'trail-touring':{ pb:'da', basis:'Drive-away, dealer quote', warranty:5, battery:8, ancap:null,
+    note:'Price is a drive-away dealer quote. Warranty and battery cover are from Carsales. Servicing is every 12 months or 15,000 km, with no price published. Carsales lists five ANCAP stars while earlier research found no independent test, so the status is blank.' },
+  'id4-pro':     { pb:'da', basis:'Drive-away' }
+};
+DATA.forEach(d => { if (PATCH[d.id]) Object.assign(d, PATCH[d.id]); });
+
+/* Second research pass, 24 October 2026: ANCAP stars and other missing figures.
+   addNote appends to the existing note; note replaces it. */
+const TESLA_NOTE = 'Warranty is five years with unlimited kilometres. Battery cover of 8 years or 160,000 km comes from a dealer listing. Carsales lists five ANCAP stars, rated in 2025. Tesla does not publish service intervals or prices.';
+const STAR5 = {};
+['enyaq-60','enyaq-85','sealion-premium','sealion-performance','bz4x-2wd','bz4x-awd','bz4x-touring','trail-awd','trail-touring','id4-pro',
+ 'elexio-base','elexio-elite','i5-rwd','i5-elite','i5-nline','i5-n','zx-base','zx-lr','zx-perf','zx-black','mg-s5',
+ 'atto1-ess','atto3-ess','atto3-prem','ev3-air-sr','ev3-air-lr','ev3-earth','ev3-gtline','ev3-gtline-awd',
+ 'ex30-plus','ex30-ultra','ex30-cc','my-rwd','my-lr','my-l','my-perf'].forEach(id => { STAR5[id] = { stars:5 }; });
+const PATCH2_EXTRA = {
+  'ev5-air-sr': { power:160, addNote:'Power is from Tynan.' },
+  'ev5-air-lr': { power:160, addNote:'Power is from Tynan.' },
+  'ev5-earth':  { power:230, addNote:'Power is from Tynan.' },
+  'ev5-gtline': { power:230, addNote:'Power is from Tynan.' },
+  'enyaq-60': { stars:5, addNote:'The five-star result is Euro NCAP\'s rating of the Enyaq.' },
+  'enyaq-85': { stars:5, addNote:'The five-star result is Euro NCAP\'s rating of the Enyaq.' },
+  'id4-pro':  { stars:5, addNote:'Euro NCAP also rated the ID.4 five stars.' },
+  'trail-awd':     { stars:5 },
+  'trail-touring': { stars:5 },
+  'sealion-premium':     { ancap:'aus', stars:5, addNote:'ANCAP tested the Sealion 7 in 2025 and Autobuzz reports five stars.' },
+  'sealion-performance': { ancap:'aus', stars:5, addNote:'ANCAP tested the Sealion 7 in 2025 and Autobuzz reports five stars.' },
+  'my-rwd':  { range:466, power:220, battery:8, stars:5, note:'Price is the CarExpert Sydney drive-away figure, and The Beep gives $64,513. Tesla advertises this variant from $58,900 before on-road costs. Range and power are from The Beep, and power comes from that source alone. ' + TESLA_NOTE },
+  'my-lr':   { range:600, power:378, battery:8, stars:5, note:'Price is the CarExpert Sydney drive-away figure, and The Beep gives $74,933. Range and power agree between The Beep and Carsales. ' + TESLA_NOTE },
+  'my-l':    { range:681, power:378, battery:8, stars:5, note:'Price is the CarExpert Sydney drive-away figure, and The Beep gives $81,185. Range and power are from The Beep. ' + TESLA_NOTE },
+  'my-perf': { range:580, battery:8, stars:5, note:'Price is the CarExpert Sydney drive-away figure, and The Beep gives $91,605. Range is from The Beep. Sources give three power figures for this variant (338, 393 and 461 kW), so none is shown. ' + TESLA_NOTE },
+  'elexio-base':  { note:'Price, range and power are from The Beep. The EV Report reports five ANCAP stars (February 2026), without saying whether the test was local. Battery warranty and servicing were not found.' },
+  'elexio-elite': { note:'Price, range and power are from The Beep, and an earlier source gave $59,990 drive-away, so confirm the current price with the dealer. The EV Report reports five ANCAP stars (February 2026), without saying whether the test was local. Battery warranty and servicing were not found.' },
+  'kona-sr':      { range:370, power:99,  drive:'FWD', battery:8, stars:4, note:'Price is after the $8,000 reduction reported by Chasing Cars. Range, power and cover are from EV Central, and Carsales lists four ANCAP stars (2023). Vehicle warranty is 5 years in Carsales and 7 years in EV Central, so none is shown.' },
+  'kona-er':      { range:505, power:150, drive:'FWD', battery:8, stars:4, note:'Price is rounded to the nearest $1,000 in the source. Range, power and cover are from EV Central, and Carsales lists four ANCAP stars (2023). Vehicle warranty is 5 years in Carsales and 7 years in EV Central, so none is shown.' },
+  'kona-elite':   { range:444, power:150, drive:'FWD', battery:8, stars:4, note:'Price is rounded to the nearest $1,000 in the source and this is a new grade for the 2027 model year. Range, power and cover are from EV Central, and Carsales lists four ANCAP stars (2023). Vehicle warranty is 5 years in Carsales and 7 years in EV Central, so none is shown.' },
+  'kona-premium': { range:505, power:150, drive:'FWD', battery:8, stars:4, note:'Price is rounded to the nearest $1,000 in the source. Range, power and cover are from EV Central for the Premium Extended Range, and Carsales lists four ANCAP stars (2023). Vehicle warranty is 5 years in Carsales and 7 years in EV Central, so none is shown.' },
+  'kona-nline':   { drive:'FWD', battery:8, stars:4, note:'Price is rounded to the nearest $1,000 in the source. Drivetrain is front-wheel drive across the Kona Electric range. Range and power were not found for this grade. Carsales lists four ANCAP stars (2023).' },
+  'i5-rwd':   { addNote:'Carsales lists five ANCAP stars.' },
+  'i5-elite': { addNote:'Carsales lists five ANCAP stars.' },
+  'i5-nline': { addNote:'Carsales lists five ANCAP stars.' },
+  'i5-n':     { addNote:'Carsales lists five ANCAP stars.' },
+  'zx-base':  { battery:8, addNote:'Battery cover and the five ANCAP stars are range-wide figures from Carsales. Servicing is every 12 months or 20,000 km with no price published.' },
+  'zx-lr':    { battery:8, addNote:'Battery cover and the five ANCAP stars are range-wide figures from Carsales. Servicing is every 12 months or 20,000 km with no price published.' },
+  'zx-perf':  { battery:8, drive:'AWD', note:'Price is the CarExpert Sydney drive-away figure. Carsales lists this variant as all-wheel drive. Battery cover and the five ANCAP stars are range-wide figures from Carsales. Servicing is every 12 months or 20,000 km with no price published.' },
+  'zx-black': { battery:8, addNote:'Battery cover and the five ANCAP stars are range-wide figures from Carsales. Servicing is every 12 months or 20,000 km with no price published.' },
+  'atto1-ess':  { warranty:6, battery:8, addNote:'Warranty terms are from a pre-launch article and apply to the whole range.' },
+  'atto1-prem': { warranty:6, battery:8, addNote:'No national drive-away offer applies to this variant. Warranty terms are from a pre-launch article and apply to the whole range.' },
+  'atto2-dyn':  { range:null, warranty:6, battery:8, note:'Price is the launch price from an EV Central article, so check current offers. Range is 345 km in that article and 410 km in a later NRMA review, so none is shown. Warranty terms are from the NRMA review, which lists no ANCAP rating.' },
+  'atto2-prem': { range:null, warranty:6, battery:8, note:'Price is the launch price from an EV Central article, so check current offers. Range is 345 km in that article and 410 km in a later NRMA review, so none is shown. Warranty terms are from the NRMA review, which lists no ANCAP rating.' },
+  'atto3-ess':  { service:341, addNote:'Servicing is the CarExpert average of $341 a year over 11 years for all Atto 3 variants (October 2024).' },
+  'atto3-prem': { service:341, addNote:'Servicing is the CarExpert average of $341 a year over 11 years for all Atto 3 variants (October 2024).' },
+  'ex30-plus':  { warranty:5, service:0, note:'Price is after the April 2026 reduction. Carsales lists a five-year, unlimited-kilometre warranty, five ANCAP stars (2024) and free scheduled servicing for 5 years or 150,000 km on the EX30. Battery cover was not stated.' },
+  'ex30-ultra': { warranty:5, service:0, note:'Price is after the April 2026 reduction. The 462 km figure is given once for both single-motor grades. Carsales lists a five-year, unlimited-kilometre warranty, five ANCAP stars (2024) and free scheduled servicing for 5 years or 150,000 km on the EX30.' },
+  'ex30-cc':    { warranty:5, service:0, note:'Carsales lists a five-year, unlimited-kilometre warranty, five ANCAP stars (2024) and free scheduled servicing for 5 years or 150,000 km on the EX30. Battery cover was not stated.' },
+  'ex40-ultra': { warranty:5, note:'Price is after the April 2026 reduction. The five-year warranty is Volvo\'s general figure from CarsGuide (2022). ANCAP and servicing were not found for the EX40.' },
+  'ex40-twin':  { warranty:5, note:'Price is after the April 2026 reduction. The five-year warranty is Volvo\'s general figure from CarsGuide (2022). ANCAP and servicing were not found for the EX40.' }
+};
+const PATCH2 = {};
+[STAR5, PATCH2_EXTRA].forEach(src => Object.keys(src).forEach(k => { PATCH2[k] = Object.assign(PATCH2[k] || {}, src[k]); }));
+DATA.forEach(d => {
+  const p = PATCH2[d.id];
+  if (p) {
+    const { addNote, ...rest } = p;
+    Object.assign(d, rest);
+    if (addNote) d.note = d.note + ' ' + addNote;
+  }
+  if (d.stars === undefined) d.stars = null;
+});
+
+const ANCAP_LABEL = { aus:'Tested in Australia', carry:'Carried over from overseas testing', none:'Not yet tested' };
+const money = v => '$' + Math.round(v).toLocaleString('en-AU');
+
+/* Review-based findings.
+   Each finding: value, how many outlets reported it (multi, one, own, brand) and what the report said.
+   Findings are held per model, not per variant. Anything not listed shows as a dash. */
+const EVL = { multi:'Several outlets', one:'One outlet', own:'Own test drive', brand:'Brand-level report' };
+const E = (v, ev, t) => ({ v, ev, t });
+const EXP_MODEL = {
+  'Kia EV5': {
+    acc:    E('praised','multi','Reviewers describe the distance-holding as smooth and dependable, with no notable complaints. The speed-limit warning is a separate system that resets on every drive.'),
+    accsep: E('yes','multi','Reviewers note adaptive cruise and lane centring can be used independently. There is some nagging for hands-on pressure.'),
+    pos:    E('high','multi','Reviewers praised the upright, commanding driving position. A shorter UK reviewer said it suits them, and taller drivers may feel perched up. It also suited the driver in an own test drive.'),
+    vis:    E('open','multi','Reviewers praised the glasshouse and the wide mirrors.'),
+    ui:     E('nocomp','one','No wireless CarPlay connection complaints were found.'),
+    cp:     E('wireless','one','Wireless CarPlay and Android Auto are offered.'),
+    audio:  E('criticised','one','The Harman Kardon system distorted at high volume in one review.'),
+    screen: E('wide','one','CarExpert describes a three-section display: a 12.3 inch cluster and a 12.3 inch infotainment screen either side of a 5.0 inch climate monitor, built as one unit.'),
+    phys:   E('mixed','one','CarExpert says the 5.0 inch climate monitor is a touchscreen that works with central physical switches for fan speed and temperature.')
+  },
+  'Kia EV6': {
+    vis:    E('limited','one','A 2022 CarExpert review says rearward visibility is limited by the roof and window design. A blind-spot camera feed in the instrument cluster helps.'),
+    phys:   E('touch','one','CarExpert (2022) says climate and menu functions are on a touch bar below the air vents, and the heated seat and steering wheel controls are touch-sensitive.'),
+    screen: E('wide','one','CarExpert (2022) describes a gently curved dashboard with two 12.3 inch widescreen displays.')
+  },
+  'Kia EV3': {
+    acc:    E('praised','one','CarExpert found it kept the set speed and gaps smoothly without braking randomly. Lane centring was occasionally overzealous.'),
+    vis:    E('open','one','CarExpert says the corners are all in easy view. The Beep notes the GT-Line has a single reversing camera and no surround view.'),
+    ui:     E('simple','multi','CarExpert calls the system very good. The Beep says menus respond quickly and the physical shortcut buttons work, but the climate strip sits low and slightly out of the sightline.'),
+    cp:     E('wireless','one','CarExpert confirms wireless Apple CarPlay for Australian models.'),
+    phys:   E('mixed','multi','CarExpert says climate controls sit on a touchscreen panel. The Beep says the physical shortcut buttons underneath work, but the climate strip sits low and slightly out of the sightline.'),
+    screen: E('wide','one','CarExpert describes two 12.3 inch screens either side of a 5.3 inch climate touch panel, a three-screen layout from the EV9.')
+  },
+  'Hyundai Kona Electric': {
+    vis:    E('limited','one','GoAuto says the A-pillars are a little chunky and hinder the view at roundabouts and angled intersections, though it can be worked around.'),
+    ui:     E('simple','one','GoAuto cites simple controls and a logical infotainment interface.')
+  },
+  'Geely EX5': {
+    acc:    E('complaints','one','CarExpert says it leaves a generous gap to the car ahead, which lets other cars cut in and prompts hard braking, and it slows considerably in corners.'),
+    ui:     E('simple','one','CarExpert calls the system easy enough to use and hard to get lost in.'),
+    phys:   E('mixed','one','CarExpert says physical buttons cover on and off, auto, air circulation and rear demist. Temperature and fan speed use touchscreen shortcuts.')
+  },
+  'Hyundai Elexio': {
+    screen: E('wide','one','The Beep describes a single 27 inch panoramic display across the dash.'),
+    phys:   E('touch','one','The Beep says there are no physical climate or volume controls beyond the steering wheel, and temperature is set with small on-screen buttons.')
+  },
+  'BYD Atto 1': {
+    phys:   E('mixed','one','The Beep says a row of rotary switches sits below the screen, but temperature and fan settings live mostly on the screen.')
+  },
+  'BYD Atto 2': {
+    phys:   E('touch','one','GoAuto mentions a permanent climate bar on the central touchscreen. The physical hotkeys cover volume, regen, drive mode and start and stop.')
+  },
+  'Hyundai Ioniq 5': {
+    pos:    E('high','one','One review describes a somewhat elevated driving position.'),
+    vis:    E('open','one','The same review notes a tremendous amount of forward visibility from a low-slung dashboard.'),
+    ui:     E('criticised','one','The review lists the infotainment system as unimpressive. Climate settings keep physical buttons.'),
+    phys:   E('physical','one','The review says the minimalist cabin reduces physical buttons, but the climate settings keep them.'),
+    screen: E('wide','one','The review says the 12.3 inch driver display and 12.3 inch infotainment screen sit side by side.')
+  },
+  'Skoda Enyaq': {
+    acc:    E('nocomp','multi','No specific complaints about adaptive cruise were found in the reviews read.'),
+    vis:    E('open','multi','Reviewers praised the forward visibility and seating position.'),
+    cluster:E('blocked','one','One reviewer found the digital speedo low-set and out of the general line of sight.'),
+    ui:     E('simple','one','Physical toggles and straightforward controls. There is no connected-services app for remote control from a phone.')
+  },
+  'BYD Sealion 7': {
+    acc:    E('praised','multi','Plain adaptive cruise is described as working fine, including in a 10,000 km ownership review. Complaints were about the combined lane-steering mode.'),
+    accsep: E('no','multi','Several reviewers wished BYD let you separate adaptive cruise from the combined lane-trace system.'),
+    vis:    E('limited','multi','Poor rear visibility from the coupe roofline is reported by several reviewers, and the driver mirror does not adjust far enough out. A 360 degree camera helps.'),
+    ui:     E('criticised','multi','The infotainment is described as a complex rotating screen, less intuitive than rivals. One owner reported Android Auto navigation lagging behind real position.'),
+    cp:     E('wireless','one','Wireless CarPlay is offered.'),
+    screen: E('tablet','multi','Reviewers describe a large rotating centre screen.'),
+    phys:   E('touch','one','CarExpert criticises the climate controls for sitting behind a menu on the touchscreen. Three-finger swipes adjust temperature and fan speed.'),
+    audio:  E('praised','one','The Dynaudio system is generally praised.')
+  },
+  'BYD Atto 3': {
+    acc:    E('praised','one','RACQ says adaptive cruise matches the speed of the car ahead and the driver assists work well for the most part without being intrusive.'),
+    cluster:E('clear','one','RACQ says the small digital instrument screen is well positioned in the line of sight.'),
+    ui:     E('simple','one','RACQ calls the interface reasonably straightforward, with a row of shortcut switches. Climate and seat heating are mainly on the touchscreen.'),
+    cp:     E('notwireless','one','RACQ reports wired Apple CarPlay and wireless Android Auto.'),
+    screen: E('tablet','multi','Both CarAdvice and RACQ describe a centre screen that rotates between landscape and portrait.'),
+    phys:   E('touch','one','RACQ says the console has shortcut switches for drive mode and regen braking, while climate and seat heating are mainly on the touchscreen.')
+  },
+  'Toyota bZ4X': {
+    acc:    E('praised','one','The Beep calls it among the better-calibrated systems on sale, with lane keeping that nudges rather than fights.'),
+    accsep: E('yes','one','Reviewers describe physical buttons for cruise and lane trace, and driver aids that switch off in a couple of taps.'),
+    cluster:E('blocked','one','One reviewer found the steering wheel blocked the view of the digital speedo, depending on seating position.'),
+    ui:     E('simple','one','Physical buttons for cruise and lane trace. There is no glovebox because the space holds the twin wireless chargers.')
+  },
+  'Subaru Trailseeker': {
+    acc:    E('praised','one','EyeSight is the same family of system as in the current Subaru XV. Reviewers report reliable distance-holding, with some complaints about beeping.'),
+    pos:    E('low','own','In an own test drive the seating felt deeper in the seat, more under than over.'),
+    vis:    E('limited','one','Some shorter drivers found the camera housing sat in their eyeline.'),
+    ui:     E('criticised','one','A reviewer disliked the steering wheel and found the climate dials fiddly. Worth a test drive.')
+  },
+  'Volkswagen ID.4': {
+    ui:     E('criticised','one','One review reported no wireless CarPlay and no built-in sat nav.'),
+    cp:     E('notwireless','one','One review reported no wireless CarPlay.')
+  },
+  'Volvo EX30': {
+    cluster:E('none','one','GoAuto notes there is no driver instrument panel, with speed on the central screen. Mirror adjustment is on the touchscreen.'),
+    ui:     E('mixed','one','GoAuto found the screen crisp and reasonably straightforward, with some functions buried deep and touchscreen controls not always intuitive.'),
+    cp:     E('wireless','one','Listed in the equipment as wireless Apple CarPlay and Android Auto.'),
+    screen: E('single','one','GoAuto says there is a single 12.3 inch touchscreen with access to most controls, and speed is shown at the top corner of it.')
+  },
+  'Zeekr 7X': {
+    ui:     E('simple','one','Chasing Cars praised the responsive 16 inch screen and the indicator and wiper stalks and steering wheel hard keys. The test car had no English, so usability was not fully judged.'),
+    cp:     E('wireless','one','Listed in the standard features as wireless CarPlay.'),
+    screen: E('wide','one','Chasing Cars describes a 13 inch driver display and a 16 inch central screen as two units side by side.')
+  }
+};
+const EXP_BRAND = {
+  Kia:     { cyber: E('notnamed','brand','Kia was not named in the Australian cybersecurity reports found.') },
+  Hyundai: { cyber: E('named','brand','Hyundai is named in an Office of the Australian Information Commissioner investigation reported in the earlier research.') },
+  Toyota:  { cyber: E('named','brand','Toyota is named in an Office of the Australian Information Commissioner investigation reported in the earlier research.') },
+  BYD:     { cyber: E('named','brand','Four Corners reported a passwordless access point in the BYD Shark 6, a different model. This is a finding about the brand, not this variant.') },
+  Geely:   { cyber: E('notnamed','brand','Nothing was found about Geely in the reports read.') },
+  Zeekr:   { cyber: E('notnamed','brand','Nothing was found about Geely, Zeekr\'s parent, in the reports read.') }
+};
+const EXP_VARIANT = {
+  'ex5-inspire':     { cluster: E('hud','one','CarExpert describes a 13.4 inch head-up display on the Inspire only, and calls it clean, bright and easy to read.') },
+  'ev5-gtline':      { cluster: E('hud','one','CarExpert lists an augmented reality head-up display under the EV5 GT-Line additions.') },
+  'sealion-premium': { cluster: E('hud','one','CarExpert lists a head-up display on the Premium and says it likes it. It does not confirm one for the Performance.') },
+  'kona-premium':    { cluster: E('hud','one','GoAuto lists a head-up display among the features the Premium variants add.') },
+  'kona-nline':      { cluster: E('hud','one','GoAuto lists a head-up display among the features the Premium variants add. It does not name the N Line separately.') }
+};
+const EXP_IDS = ['acc','accsep','pos','vis','cluster','ui','screen','phys','cp','audio','cyber'];
+DATA.forEach(d => {
+  d.exp = Object.assign({}, EXP_BRAND[d.brand] || {}, EXP_MODEL[d.brand + ' ' + d.model] || {}, EXP_VARIANT[d.id] || {});
+  EXP_IDS.forEach(id => { d[id] = d.exp[id] ? d.exp[id].v : null; });
+});
+
+const EXPOPT = {
+  pos:     { high:'Elevated, commanding position', low:'Lower, sitting deeper in the seat' },
+  vis:     { open:'Reported as good', limited:'A limitation reported' },
+  cluster: { clear:'In the line of sight', blocked:'Reported as obstructed or low-set', hud:'Head-up display', none:'No driver display' },
+  screen:  { wide:'Side by side or panoramic across the dash', tablet:'Tablet-style central screen', single:'Single central screen, no driver display' },
+  phys:    { physical:'Physical climate buttons', mixed:'Touch panel with physical shortcut buttons', touch:'Touch panel or touchscreen only' },
+  acc:     { praised:'Described as smooth or reliable', nocomp:'No complaints found, not described', complaints:'Complaints reported' },
+  accsep:  { yes:'Reported as separate from lane steering', no:'Reported as tied to lane steering' },
+  ui:      { simple:'Described as easy to use', nocomp:'No complaints found', mixed:'Praised and criticised', criticised:'Criticised in reviews' },
+  cp:      { wireless:'Wireless Apple CarPlay', notwireless:'Not wireless (wired, or none)' },
+  audio:   { praised:'Sound praised', criticised:'Sound criticised' },
+  cyber:   { notnamed:'Brand not named in the reports found', named:'Brand named in a public investigation or finding' }
+};
+const expCrit = (id, label, hint, def) => ({ id, label, hint, type:'cat', exp:true, options:Object.keys(EXPOPT[id]), labelOf:v=>EXPOPT[id][v], group:def });
+
+const GROUPS = {
+  comfort:{ t:'Driving and comfort', s:'From published reviews and own test drives. Available for fewer models.' },
+  own:    { t:'Cost and ownership', s:'' },
+  spec:   { t:'Specifications', s:'' }
+};
+const CRITERIA = [
+  expCrit('pos',     'Seating position',        'Where reviewers and test drives place the driver in the seat', 'comfort'),
+  expCrit('vis',     'Visibility from the driver\'s seat', 'Glasshouse, pillars, mirrors and rear view as reviewers describe them', 'comfort'),
+  expCrit('cluster', 'Instrument display', 'Whether the speedo sits in the line of sight, or a head-up display is fitted. A car with a head-up display also has a driver display', 'comfort'),
+  expCrit('acc',     'Adaptive cruise control', 'How reviewers describe the distance-holding', 'comfort'),
+  expCrit('accsep',  'Cruise without lane steering', 'Whether adaptive cruise can be used without lane centring', 'comfort'),
+  expCrit('ui',      'Infotainment ease of use', 'How reviewers describe the interface', 'comfort'),
+  expCrit('screen',  'Infotainment screen format', 'Across the dash, or a tablet-style screen', 'comfort'),
+  expCrit('phys',    'Physical controls', 'Whether climate functions have physical buttons', 'comfort'),
+  expCrit('cp',      'Apple CarPlay', 'Whether CarPlay connects wirelessly', 'comfort'),
+  expCrit('audio',   'Audio quality', 'How reviewers describe the sound system', 'comfort'),
+  { id:'service', label:'Servicing cost',  hint:'Average per year under a capped-price plan', type:'num', unit:'$ a year', step:50, def:400, fmt:v=>money(v)+'/yr', defMode:'low', group:'own' },
+  { id:'price',   label:'Purchase price',  hint:'In dollars, drive-away where known. Each variant states its price basis', type:'num', unit:'$', step:1000, def:65000, fmt:money, defMode:'low', group:'own' },
+  { id:'warranty',label:'Vehicle warranty',hint:'Length in years, ignoring kilometre caps', type:'num', unit:'years', step:1, def:7, fmt:v=>v+' yr', defMode:'high', group:'own' },
+  { id:'battery', label:'Battery warranty',hint:'Length in years', type:'num', unit:'years', step:1, def:8, fmt:v=>v+' yr', defMode:'high', group:'own' },
+  Object.assign(expCrit('cyber', 'Cybersecurity reports', 'Whether the brand appears in public investigations or findings', 'own'), {}),
+  { id:'range',   label:'Range',           hint:'Claimed WLTP range, in kilometres', type:'num', unit:'km', step:10, def:500, fmt:v=>v+' km', defMode:'high', group:'spec' },
+  { id:'stars',   label:'ANCAP stars',     hint:'Star rating out of five', type:'num', unit:'stars', step:1, def:5, fmt:v=>v+' stars', defMode:'high', group:'spec' },
+  { id:'ancap',   label:'Crash rating status', hint:'How the ANCAP result was obtained', type:'cat', options:['aus','carry','none'], labelOf:v=>ANCAP_LABEL[v], group:'spec' },
+  { id:'drive',   label:'Drivetrain',     hint:'Which driven wheels you would accept', type:'cat', options:['FWD','RWD','AWD'], labelOf:v=>({FWD:'Front-wheel drive',RWD:'Rear-wheel drive',AWD:'All-wheel drive'})[v], group:'spec' },
+  { id:'power',   label:'Power',           hint:'Peak motor output, in kilowatts', type:'num', unit:'kW', step:10, def:200, fmt:v=>v+' kW', defMode:'high', group:'spec' }
+];
+const MODES = [
+  { v:'low',  t:'Prefer lower' },
+  { v:'high', t:'Prefer higher' },
+  { v:'max',  t:'At most' },
+  { v:'min',  t:'At least' }
+];
+
+/* State */
+const KEY = 'ev-selector-v1';
+function freshState() {
+  const sel = {};
+  CRITERIA.forEach(c => {
+    sel[c.id] = { on:false, mode:c.defMode || 'low', value:c.def || 0, weight:2, accept: c.type==='cat' && !c.exp ? c.options.slice() : [] };
+  });
+  return { sel, hard:false, da:false, cov:false, sort:'match', example:false };
+}
+function exampleState() {
+  const s = freshState();
+  s.sel.vis = { on:true, mode:'low', value:0, weight:3, accept:['open'] };
+  s.sel.acc = { on:true, mode:'low', value:0, weight:3, accept:['praised','nocomp'] };
+  s.sel.service = { on:true, mode:'max', value:500, weight:2, accept:[] };
+  s.sel.power = { on:true, mode:'high', value:200, weight:1, accept:[] };
+  s.example = true;
+  return s;
+}
+let state = exampleState();
+try {
+  const saved = JSON.parse(localStorage.getItem(KEY) || 'null');
+  if (saved && saved.sel) {
+    const base = freshState();
+    CRITERIA.forEach(c => { if (saved.sel[c.id]) Object.assign(base.sel[c.id], saved.sel[c.id]); });
+    base.hard = !!saved.hard; base.da = !!saved.da; base.cov = !!saved.cov; base.sort = saved.sort || 'match'; base.example = false;
+    state = base;
+  }
+} catch (e) {}
+function save() { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} }
+
+/* Criteria panel */
+const list = document.getElementById('crit-list');
+function buildPanel() {
+  const items = CRITERIA.map(c => {
+    const known = DATA.filter(d => d[c.id] != null).length;
+    let body = '';
+    if (c.type === 'num') {
+      body = `
+        <div>
+          <label class="field-label" for="mode-${c.id}">Preference</label>
+          <select id="mode-${c.id}" data-act="mode" data-id="${c.id}">${MODES.map(m => `<option value="${m.v}">${m.t}</option>`).join('')}</select>
+          <div class="limit-row" data-limit="${c.id}">
+            <input type="number" id="val-${c.id}" data-act="value" data-id="${c.id}" step="${c.step}" inputmode="decimal" aria-label="${c.label} limit">
+            <span class="unit">${c.unit}</span>
+          </div>
+        </div>`;
+    } else {
+      const counts = {};
+      DATA.forEach(d => { if (d[c.id] != null) counts[d[c.id]] = (counts[d[c.id]] || 0) + 1; });
+      body = `
+        <div>
+          <span class="field-label">Accept these</span>
+          <p class="need" id="need-${c.id}" hidden>Tick at least one option to use this criterion.</p>
+          <div class="opts">${c.options.map(o => `
+            <label class="opt"><input type="checkbox" data-act="accept" data-id="${c.id}" value="${o}"><span>${c.labelOf(o)}</span><span class="count">${counts[o] || 0}</span></label>`).join('')}
+          </div>
+        </div>`;
+    }
+    return `
+      <div class="crit" id="crit-${c.id}">
+        <button type="button" class="crit-toggle" data-act="toggle" data-id="${c.id}" aria-pressed="false">
+          <span class="box" aria-hidden="true"></span>
+          <span><span class="crit-name">${c.label}</span><span class="crit-hint">${c.hint}. Data for ${known} of ${DATA.length} variants${c.exp && c.id !== 'cyber' ? ', from reviews' : ''}.</span></span>
+        </button>
+        <div class="crit-body" id="body-${c.id}" hidden>
+          ${body}
+          <div>
+            <span class="field-label" id="imp-${c.id}">Importance</span>
+            <div class="seg" role="group" aria-labelledby="imp-${c.id}">
+              <button type="button" data-act="weight" data-id="${c.id}" data-w="1" aria-pressed="false">Low</button>
+              <button type="button" data-act="weight" data-id="${c.id}" data-w="2" aria-pressed="false">Medium</button>
+              <button type="button" data-act="weight" data-id="${c.id}" data-w="3" aria-pressed="false">High</button>
+            </div>
+          </div>
+        </div>
+      </div>`;
+  });
+  list.innerHTML = Object.keys(GROUPS).map(g => {
+    const g0 = GROUPS[g];
+    const inner = CRITERIA.map((c, k) => c.group === g ? items[k] : '').join('');
+    return `<section class="grp-box">
+      <h3 class="grp"><button type="button" class="grp-btn" data-act="group" data-g="${g}" aria-expanded="false" aria-controls="gbody-${g}">
+        <span>${g0.t}</span><span class="gcount" id="gcount-${g}"></span><span class="chev" aria-hidden="true"></span></button></h3>
+      <div class="grp-body" id="gbody-${g}" hidden>${g0.s ? `<p class="grp-sub">${g0.s}</p>` : ''}${inner}</div>
+    </section>`;
+  }).join('');
+}
+function syncPanel() {
+  Object.keys(GROUPS).forEach(g => {
+    const n = activeCriteria().filter(c => c.group === g).length;
+    document.getElementById('gcount-' + g).textContent = n ? n + ' selected' : '';
+  });
+  CRITERIA.forEach(c => {
+    const st = state.sel[c.id];
+    const root = document.getElementById('crit-' + c.id);
+    root.classList.toggle('on', st.on);
+    root.querySelector('[data-act="toggle"]').setAttribute('aria-pressed', String(st.on));
+    document.getElementById('body-' + c.id).hidden = !st.on;
+    root.querySelectorAll('[data-act="weight"]').forEach(b => b.setAttribute('aria-pressed', String(Number(b.dataset.w) === st.weight)));
+    if (c.type === 'num') {
+      document.getElementById('mode-' + c.id).value = st.mode;
+      const inp = document.getElementById('val-' + c.id);
+      if (document.activeElement !== inp) inp.value = st.value;
+      root.querySelector('[data-limit]').hidden = !(st.mode === 'max' || st.mode === 'min');
+    } else {
+      root.querySelectorAll('[data-act="accept"]').forEach(i => { i.checked = st.accept.includes(i.value); });
+      const need = document.getElementById('need-' + c.id);
+      if (need) need.hidden = st.accept.length > 0;
+    }
+  });
+  document.getElementById('hard').checked = state.hard;
+  document.getElementById('da').checked = state.da;
+  document.getElementById('cov').checked = state.cov;
+  document.getElementById('sort').value = state.sort;
+  document.getElementById('example').hidden = !state.example;
+}
+
+/* Scoring */
+const extent = {};
+CRITERIA.filter(c => c.type === 'num').forEach(c => {
+  const vals = DATA.map(d => d[c.id]).filter(v => v != null);
+  extent[c.id] = { min: Math.min(...vals), max: Math.max(...vals) };
+});
+function scoreOne(c, st, car) {
+  const v = car[c.id];
+  if (v == null) return { state:'none', s:null, binary:false };
+  if (c.type === 'cat') {
+    const ok = st.accept.includes(v);
+    return { state: ok ? 'full' : 'empty', s: ok ? 1 : 0, binary:true };
+  }
+  if (st.mode === 'max' || st.mode === 'min') {
+    const ok = st.mode === 'max' ? v <= st.value : v >= st.value;
+    return { state: ok ? 'full' : 'empty', s: ok ? 1 : 0, binary:true };
+  }
+  const e = extent[c.id];
+  const span = e.max - e.min || 1;
+  const s = st.mode === 'low' ? (e.max - v) / span : (v - e.min) / span;
+  return { state: s >= 0.67 ? 'full' : (s >= 0.34 ? 'half' : 'empty'), s, binary:false };
+}
+function activeCriteria() {
+  return CRITERIA.filter(c => {
+    const st = state.sel[c.id];
+    if (!st.on) return false;
+    if (c.type === 'cat' && st.accept.length === 0) return false;
+    if (c.type === 'num' && (st.mode === 'max' || st.mode === 'min') && !(st.value >= 0)) return false;
+    return true;
+  });
+}
+function evaluate() {
+  const act = activeCriteria();
+  return DATA.map(car => {
+    let got = 0, tot = 0, known = 0, miss = false, allW = 0;
+    const fits = act.map(c => {
+      const st = state.sel[c.id];
+      const r = scoreOne(c, st, car);
+      allW += st.weight;
+      if (r.s != null) { got += st.weight * r.s; tot += st.weight; known++; if (r.binary && r.s === 0) miss = true; }
+      return { c, r };
+    });
+    return { car, fits, pct: tot ? Math.round(100 * got / tot) : null, conf: allW ? got / allW : 0, known, total: act.length, miss };
+  });
+}
+
+/* Results */
+const carsEl = document.getElementById('cars');
+const summaryEl = document.getElementById('summary');
+function specVal(c, car) {
+  const v = car[c.id];
+  if (v == null) return '<dd class="na" aria-label="No data found">-</dd>';
+  if (c.type === 'cat') return '<dd>' + (c.id === 'drive' ? v : c.labelOf(v)) + '</dd>';
+  return '<dd>' + c.fmt(v) + '</dd>';
+}
+function renderResults() {
+  const rows = evaluate();
+  const act = activeCriteria();
+  let shown = rows.slice();
+  if (state.hard && act.length) shown = shown.filter(r => !r.miss);
+  if (state.da) shown = shown.filter(r => r.car.pb === 'da');
+  if (state.cov && act.length) shown = shown.filter(r => r.known === r.total);
+  const cmpBrand = (a, b) => (a.car.brand + a.car.model + a.car.variant).localeCompare(b.car.brand + b.car.model + b.car.variant);
+  shown.sort((a, b) => {
+    if (state.sort === 'price') return a.car.price - b.car.price;
+    if (state.sort === 'range') return (b.car.range || 0) - (a.car.range || 0);
+    if (state.sort === 'brand') return cmpBrand(a, b);
+    if (state.sort === 'conf') { if (b.conf !== a.conf) return b.conf - a.conf; return a.car.price - b.car.price; }
+    if (act.length) {
+      const pa = a.pct == null ? -1 : a.pct, pb = b.pct == null ? -1 : b.pct;
+      if (pb !== pa) return pb - pa;
+      if (b.known !== a.known) return b.known - a.known;
+    }
+    return a.car.price - b.car.price;
+  });
+
+  if (!act.length) {
+    summaryEl.textContent = 'No criteria chosen yet, so all ' + DATA.length + ' variants are listed without a match score.';
+  } else {
+    summaryEl.textContent = 'Showing ' + shown.length + ' of ' + DATA.length + ' variants against ' + act.length + ' chosen ' + (act.length === 1 ? 'criterion' : 'criteria') + '.';
+  }
+  if (!shown.length) {
+    carsEl.innerHTML = '<div class="empty-state">No variants meet every limit and accepted option. Widen a limit or switch off the option to hide variants that miss one.</div>';
+    return;
+  }
+  const basics = ['price','range','drive'].map(id => CRITERIA.find(c => c.id === id));
+  const selExp = act.filter(c => c.exp);
+  carsEl.innerHTML = shown.map(r => {
+    const car = r.car;
+    const fits = r.fits.map(f => {
+      const st = state.sel[f.c.id];
+      const val = car[f.c.id];
+      let txt = val == null ? '-' : (f.c.type === 'cat' ? (f.c.id === 'drive' ? val : f.c.labelOf(val)) : f.c.fmt(val));
+      if (f.c.exp && car.exp[f.c.id]) txt += ' (' + EVL[car.exp[f.c.id].ev].toLowerCase() + ')';
+      let verdict = { full:'Matches', half:'Partly matches', empty:'Does not match', none:'No data found' }[f.r.state];
+      return `<li class="fit"><i class="dot ${f.r.state}" aria-hidden="true"></i><span><strong>${f.c.label}:</strong> ${txt}<span class="sr" style="position:absolute;left:-9999px"> ${verdict}</span></span></li>`;
+    }).join('');
+    const match = act.length ? `
+      <div class="match">
+        ${r.pct == null ? '<strong>n/a</strong><small>No data for chosen criteria</small>' : `<strong>${r.pct}%</strong><small>match, ${r.known} of ${r.total} with data</small><div class="bar" role="img" aria-label="${r.pct} percent match"><span style="width:${r.pct}%"></span></div>`}
+      </div>` : '';
+    const said = selExp.filter(c => car.exp[c.id]).map(c => `<li><b>${c.label}:</b> ${car.exp[c.id].t}</li>`).join('');
+    return `
+      <article class="car">
+        <div class="car-top nomatch">
+          <div class="car-title"><div class="brand">${car.brand}</div><h3>${car.model} ${car.variant}</h3></div>
+          <dl class="specs">${basics.map(c => `<div><dt>${c.label}</dt>${specVal(c, car)}${c.id === 'price' ? `<small class="basis">${car.basis || 'Basis not stated'}</small>` : ''}</div>`).join('')}</dl>
+        </div>
+        ${act.length ? `<div class="car-mid">${match}<ul class="fits">${fits}</ul></div>` : ''}
+        <details class="said"><summary>Details</summary>${said ? `<ul>${said}</ul>` : ''}<p class="note">${car.note}</p></details>
+      </article>`;
+  }).join('');
+}
+
+/* Events */
+function refresh() { syncPanel(); renderResults(); save(); }
+list.addEventListener('click', e => {
+  const t = e.target.closest('[data-act]');
+  if (!t) return;
+  if (t.dataset.act === 'group') {
+    const body = document.getElementById('gbody-' + t.dataset.g);
+    body.hidden = !body.hidden;
+    t.setAttribute('aria-expanded', String(!body.hidden));
+    return;
+  }
+  const id = t.dataset.id, st = state.sel[id];
+  if (t.dataset.act === 'toggle') { st.on = !st.on; state.example = false; }
+  if (t.dataset.act === 'weight') { st.weight = Number(t.dataset.w); state.example = false; }
+  if (t.dataset.act !== 'toggle' && t.dataset.act !== 'weight') return;
+  refresh();
+});
+list.addEventListener('change', e => {
+  const t = e.target.closest('[data-act]');
+  if (!t) return;
+  const st = state.sel[t.dataset.id];
+  state.example = false;
+  if (t.dataset.act === 'mode') st.mode = t.value;
+  if (t.dataset.act === 'accept') {
+    const set = new Set(st.accept);
+    t.checked ? set.add(t.value) : set.delete(t.value);
+    st.accept = Array.from(set);
+  }
+  refresh();
+});
+list.addEventListener('input', e => {
+  const t = e.target.closest('[data-act="value"]');
+  if (!t) return;
+  const n = parseFloat(t.value);
+  state.sel[t.dataset.id].value = isNaN(n) ? NaN : n;
+  state.example = false;
+  document.getElementById('example').hidden = true;
+  renderResults(); save();
+});
+document.getElementById('hard').addEventListener('change', e => { state.hard = e.target.checked; refresh(); });
+document.getElementById('da').addEventListener('change', e => { state.da = e.target.checked; refresh(); });
+document.getElementById('cov').addEventListener('change', e => { state.cov = e.target.checked; refresh(); });
+document.getElementById('sort').addEventListener('change', e => { state.sort = e.target.value; refresh(); });
+document.getElementById('reset').addEventListener('click', () => { state = freshState(); refresh(); });
+
+buildPanel();
+refresh();
+</script>
+
+</body>
+</html>
