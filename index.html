@@ -178,8 +178,9 @@ input[type="number"] { width: 130px; font-variant-numeric: tabular-nums; }
 .said summary { cursor: pointer; min-height: 32px; display: flex; align-items: center; color: var(--accent); font-weight: 600; }
 .said ul { margin: 6px 0 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; max-width: 80ch; }
 .said b { color: var(--fg); font-weight: 600; }
-#sort-wrap { margin-left: auto; }
-.view { min-width: 180px; }
+.ctl { display: flex; align-items: flex-end; gap: 16px; flex-wrap: wrap; margin-left: auto; }
+.view, .results-head .sort { width: 210px; min-width: 0; }
+.view .seg button, .results-head select { min-height: 44px; }
 .chart-controls { display: flex; flex-wrap: wrap; gap: 12px 20px; margin-top: 16px; }
 .chart-controls > div { min-width: 190px; }
 .chart-card { border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--card); padding: 12px 14px; margin-top: 12px; }
@@ -227,6 +228,7 @@ input[type="number"] { width: 130px; font-variant-numeric: tabular-nums; }
         <div>
           <h2 id="res-title">Matching variants</h2>
         </div>
+        <div class="ctl">
         <div class="view">
           <span class="field-label" id="view-l">View as</span>
           <div class="seg" role="group" aria-labelledby="view-l">
@@ -243,6 +245,7 @@ input[type="number"] { width: 130px; font-variant-numeric: tabular-nums; }
             <option value="range">Range, high to low</option>
             <option value="brand">Brand and model</option>
           </select>
+        </div>
         </div>
       </div>
       <p class="summary" id="summary" aria-live="polite"></p>
